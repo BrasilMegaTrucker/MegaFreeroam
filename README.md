@@ -1,6 +1,6 @@
 # MegaFreeroam
 
-Créditos:
+Um projeto iniciado por NicK e com apoio de Delete.
+Agora um Gamemode Público!
 
-NicK
-Delete_
+Saiba mais: http://forum.sa-mp.com/showthread.php?t=579146
