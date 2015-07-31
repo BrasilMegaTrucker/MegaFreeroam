@@ -27,7 +27,7 @@ new const Novidades[][] =
 
 #define mysql_host "localhost"
 #define mysql_usuario "Nick"
-#define mysql_senha "salocin11"
+#define mysql_senha ""
 #define mysql_db "mf_test"
 
 #include <a_samp>
