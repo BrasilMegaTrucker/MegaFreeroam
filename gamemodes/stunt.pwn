@@ -2,9 +2,7 @@
     Mega Freeroam - Modo: Stunt/DM/Drift/Race
     *        By Nic[K] e Delete_
 
-    O gamemode foi descontinuado em 2014.
-    Alguns sistemas não foram finalizados.
-    E pode haver diversos bugs.
+    # SA-MP 0.3.7
 
 */
 AntiDeAMX()
@@ -20,15 +18,17 @@ AntiDeAMX()
 new const Novidades[][] =
 {
     {"Novidades Mega Freeroam\n\n"},
-    {"v0.1 - Release Inicial"}
+    {"v0.1.1 - Update de correção"},
+    {"v0.1.1 - Hash feito em senhas."},
+    {"v0.1.1 - Atualizações significativas corrigindo bugs"}
 };
 
 //Dados de conexão do MySQL
 
 #define mysql_host "localhost"
-#define mysql_usuario "root"
-#define mysql_senha ""
-#define mysql_db "brasilm1_stunt"
+#define mysql_usuario "Nick"
+#define mysql_senha "salocin11"
+#define mysql_db "mf_test"
 
 #include <a_samp>
 native gpci(playerid, const serial[ ], maxlen);
@@ -112,6 +112,8 @@ native gpci(playerid, const serial[ ], maxlen);
 */
 #define PRESSED(%0) \
 	(((newkeys & (%0)) == (%0)) && ((oldkeys & (%0)) != (%0)))
+	
+#define HASH_SENHA  "AEOAUEABABEAEAEOUAEIX" //Sha256 para Senhas
 
 //by NicK
 
@@ -155,6 +157,13 @@ enum iVehClasse
     vClasse,
     vModeloID
 }
+
+new CorTeles[3] =
+{
+    0x00FF00FF,
+    0xFFFF00FF,
+    0x00BFFFFF
+};
 static const ClasseVeiculo[][iVehClasse] =
 {
 	{"Admiral", ClasseSalao, 445},
@@ -689,10 +698,11 @@ enum infoCmds
     ComandoLevel,
     ComandoClasse,
     ComandoNome[128],
-    ComandoInfo[128],
+    ComandoInfo[128]
 }
 static const Cmds[][infoCmds] =
 {
+	{0, cmd_veiculo, "/colisao",    "Ativa/desativa a colisão entre veículos"},
 	{0, cmd_veiculo, "/cor",        "Muda a cor de seu veículo"},
 	{0, cmd_veiculo, "/rodas",      "Põe uma roda personalzada em seu veículo"},
 	{0, cmd_veiculo, "/nos",        "Adiciona nitro em seu veículo"},
@@ -702,6 +712,8 @@ static const Cmds[][infoCmds] =
     {0, cmd_conta, "/mudarsenha",  "Mudar a senha"},
     {0, cmd_geral, "/admins", "visualiza os admins on-line"},
     {0, cmd_geral, "/arenas", "arenas para dm"},
+    {0, cmd_geral, "/contar", "Inicia uma contagem"},
+    {0, cmd_geral, "/para", "Ganha um paraquedas"},
     {0, cmd_geral, "/v", "cria algum veículo"},
     {0, cmd_geral, "/teles", "teleportes disponíveis"},
     {0, cmd_conta, "/pagar [id/nome] [quantia]", "paga em dinheiro algum jogador"},
@@ -745,7 +757,10 @@ new ARMA_LISTA;
 #define LISTA_VEICULOS 1
 /*
     Variaveis
+
 */
+new Flooder[MAX_PLAYERS];
+new IsFlooding[MAX_PLAYERS];
 
 
 enum iWebRadios
@@ -785,7 +800,7 @@ new Contagem[iContagem];
 enum pInfo
 {
     pNome[MAX_PLAYER_NAME],
-    pSenha[50],
+    pSenha[128],
     pLevel,
     pDinheiro,
     pScore,
@@ -851,6 +866,9 @@ enum pInfo
     //FPS
     pFPS,
     pDLevel,
+    
+    //Colisão 0.3.7
+    bool:Colisao,
 
     pMySQL_ID, //id do mysql
 	ORM:OrmID //Sistemas de ORM do MySQL
@@ -983,27 +1001,34 @@ static const Teleportes[][teleportInfo] =
     {"San Fierro", "sfstunt", Tele_Stunt, -2595.37, 1389.59, 7.0, 238.0, false},
     {"Aeroporto SF", "aerosf", Tele_Stunt, -1361.26, -227.83, 13.87, 366.0, false},
     {"Aeroporto LV", "aerolv", Tele_Stunt, 1295.24, 1399.25, 10.82, 289.71, false},
+    {"Golf Stunt", "golf", Tele_Stunt, 1413.6228, 2730.4304, 10.8703, 289.71, false},
     {"Drop 1", "drop1", Tele_Pistas, 849.8343,-2622.8064,798.7162, 0.0, false},
     {"Drop 2", "drop2", Tele_Pistas, 3849.5476,-1059.3527,930.3063, 90.0, false},
     {"Drop 3", "drop3", Tele_Pistas, 978.82, 1739.84, 1012.84, 90.0, true},
     {"Drop 4", "drop4", Tele_Pistas, 1250.09, 2800.61, 1555.12, 180.0, false},
     {"Twister", "twister", Tele_Pistas, 684.7673,442.7378,620.7108,293.0, false},
-    {"Tubo Água", "tuboagua", Tele_Tubos, -306.93, 371.07, -35.24, 107.0, false},
-    {"Pulo Insano", "puloinsano", Tele_Pulos, 2446.29, -1005.70, 960.30, 260.0, false},
     {"Loop", "loop", Tele_Pistas, 3351.33, -2540.65, 736.50, 17.50, false},
     {"Loop 2", "loop2", Tele_Pistas, -227.09, 980.19, 1312.80, 269.42, false},
-    {"Espiral", "espiral", Tele_Tubos, 248.87, 841.87, 362.70, 51.99, false},
     {"Insano", "insano1", Tele_Pistas, -2520.12, 157.85, 3231.90, 0.0, false},
     {"Insano 2", "insano2", Tele_Pistas, 886.52, 874.84, 936.11, 359.33, false},
     {"Insano 3", "insano3", Tele_Pistas, -1611.91, -719.59, 1527.79, 103.64, false},
-    {"Big Tunel", "bigtunel", Tele_Pulos, 2226.05, 1500.28, 3864.46, 120.88, false},
-    {"Trampolim", "trampolim", Tele_Variados, 973.25, 1246.26, 410.0, 359.33, false},
+    {"Roller", "roller", Tele_Pistas, -170.3976,-2241.1484,28.2542, 17.50, false},
+    {"Infernus Paradise", "ip", Tele_Pistas, -214.542678, -8175.392578, 35.225547,293.0, false},
+    {"Tubo Água", "tuboagua", Tele_Tubos, -306.93, 371.07, -35.24, 107.0, false},
+    {"Espiral", "espiral", Tele_Tubos, 248.87, 841.87, 362.70, 51.99, false},
     {"Tubo SF", "tubosf", Tele_Tubos, -1422.95, 998.31, 7.18, 89.25, false},
-    {"Drift", "driff1", Tele_Drift, -295.22, 1536.13, 75.56, 177.28, false},
+    {"Pulo Insano", "puloinsano", Tele_Pulos, 2446.29, -1005.70, 960.30, 260.0, false},
+    {"Big Tunel", "bigtunel", Tele_Pulos, 2226.05, 1500.28, 3864.46, 120.88, false},
+    {"Super Rampa", "superrampa", Tele_Pulos, 1463.5081,-2443.6111,1122.5062, 345.0, false},
+    {"Sky", "sky", Tele_Pulos, 2765.53,-2346.63,5135.85, 260.0, false},
+    {"Trampolim", "trampolim", Tele_Variados, 973.25, 1246.26, 410.0, 359.33, false},
+    {"Festa", "festa", Tele_Variados, 1299.0125, -227.7760, 11.5673, 359.33, false},
+    {"Monster Parkour", "monsterpk", Tele_Variados, -2909.6707,71.3213,3.7526, 180.0, false},
+    {"Drift 1", "drift1", Tele_Drift, -295.22, 1536.13, 75.56, 177.28, false},
+    {"Drift 2", "drift2", Tele_Drift, -2394.7258, -588.6559, 132.3384, 177.28, false},
     {"Drag", "drag", Tele_Corrida, 2557.99, -252.52, 71.27, 52.57, false},
     {"Nascar", "nascar", Tele_Corrida, 1782.13, -2347.31, 486.40, 184.32, false},
     {"Circuito LV", "circuitolv", Tele_Corrida, 3296.49, 1234.61, 18.15, 50.98, false},
-    {"Super Rampa", "superrampa", Tele_Pulos, 1463.5081,-2443.6111,1122.5062, 345.0, false},
     {"Los Santos", "lossantos", Tele_Normal, 1855.14, -1290.57, 13.04, 0.0, false},
     {"Los Santos - Transfender", "lstransfender", Tele_Normal, 1065.06, -1032.01, 31.72, 90.0, false},
 	{"Los Santos - Low'Riders", "lslow", Tele_Normal, 2637.79, -2002.55,13.21, 235.12, false},
@@ -1037,7 +1062,7 @@ static const ArenasDM[][iAreas] =
 {
     {"Minigun", "/minigun", {-975.975708,-1131.34},{1060.983032,1057.89},{1345.671875,1346.41}, {90.0,266.25}, 10, {38}},
     {"Combate AK-47", "/ak47", {2558.80, 2534.86,2545.04}, {-1283.43,-1286.54,-1303.41}, {1031.42,1031.42,1031.42}, {139.73,245.28,177.91}, 2, {30}}
-//    {"1 Soco", 484.2756,1363.2179,353.1300,
+    //{"1 HP", "/1hp",  {1064.838745,1529.081787,52.390094}, {1120.363281,1529.369750,52.411670}, {1120.363281,1529.369750,52.411670}, 120.0, 0, {24}}
 //  {"Vulcão", 343.7978,362.5833,10.8930
 };
 
@@ -1244,7 +1269,7 @@ stock Ex_ChangeVehicleColor(vid, cor1, cor2) {
 
 stock Ex_SetPlayerPos(playerid, Float:x, Float:y, Float:z) {
 	CallRemoteFunction("Drift_SetPos", "dfff", playerid, x, y, z);
-	return SetPlayerPos(playerid, x, y, z);
+	return Streamer_UpdateEx(playerid, x, y, z), SetPlayerPos(playerid, x, y, z);
 }
 
 #if defined _ALS_SetPlayerPos
@@ -1258,6 +1283,9 @@ stock Ex_SetPlayerPos(playerid, Float:x, Float:y, Float:z) {
 /*
     Callbacks SA-MP e Outras (by NicK)
 */
+
+//variáveis
+new Count;
 
 main()
 {
@@ -1278,7 +1306,7 @@ public OnGameModeInit()
     ShowPlayerMarkers(1);
     ShowNameTags(1);
     EnableStuntBonusForAll(1);
-	SetGameModeText("Stunt/DM/Drift/Race "Versao"");
+	SetGameModeText("Brasil - Stunt/DM/Drift/Race");
     //Skins
     AddPlayerClass(29,  2000.71, 1522.77, 17.06, 179.80, 0, 0, 0, 0, 0, 0);
     AddPlayerClass(2,  2000.71, 1522.77, 17.06, 179.80, 0, 0, 0, 0, 0, 0);
@@ -1517,7 +1545,7 @@ public OnGameModeInit()
     SendRconCommand("reloadfs driftpoints"); // Implantado
     SetTimer("Global", 1000, true);
     SetTimer("Frases", 1000 * 60 * 5, true);
-    SetTimer("CorridaAleatoria", 1000 * 60 * 25, true);
+    SetTimer("CorridaAleatoria", 1000 * 60 * 5, true);
     
     CarregarGangs();
 	CarregarAreas();
@@ -1611,7 +1639,7 @@ public OnPlayerRequestSpawn(playerid)
 {
     if(PlayerInfo[playerid][Logado] == false) return false;
     new spawn = random(sizeof(SpawnLocais));
-    SetSpawnInfo(playerid, NO_TEAM, GetPlayerSkin(playerid), SpawnLocais[spawn][0], SpawnLocais[spawn][1], SpawnLocais[spawn][2], SpawnLocais[spawn][3], 22, 99999, 28, 99999, 31, 99999);
+    SetSpawnInfo(playerid, NO_TEAM, GetPlayerSkin(playerid), SpawnLocais[spawn][0], SpawnLocais[spawn][1], SpawnLocais[spawn][2], SpawnLocais[spawn][3], 31, 99999, 26, 99999, 24, 99999);
     SpawnPlayer(playerid);
 	return 1;
 }
@@ -1668,7 +1696,7 @@ public OnPlayerConnect(playerid)
  	new ORM:ormid = orm_create("usuarios", mysql);
 	
 	orm_addvar_string(ormid, PlayerInfo[playerid][pNome], 24, "Nome");
-	orm_addvar_string(ormid, PlayerInfo[playerid][pSenha], 50, "Senha");
+	orm_addvar_string(ormid, PlayerInfo[playerid][pSenha], 128, "Senha");
    	orm_addvar_int(ormid, PlayerInfo[playerid][pMySQL_ID], "id");
    	orm_addvar_int(ormid, PlayerInfo[playerid][pLevel], "Level");
 	orm_addvar_int(ormid, PlayerInfo[playerid][pMorreu], "Morreu");
@@ -1686,6 +1714,7 @@ public OnPlayerConnect(playerid)
 	orm_addvar_int(ormid, PlayerInfo[playerid][Mudo], "Mudo");
 	orm_addvar_int(ormid, PlayerInfo[playerid][MostrarDano], "ExibirDano");
 	orm_addvar_int(ormid, PlayerInfo[playerid][pGang], "Gang");
+	orm_addvar_int(ormid, PlayerInfo[playerid][Colisao], "Colisao");
 	//Salvamento de Veículo
 	orm_addvar_int(ormid, PlayerInfo[playerid][VehModelo], "VeiculoModelo");
 	orm_addvar_int(ormid, PlayerInfo[playerid][VehCores][0], "VeiculoCor1");
@@ -1709,9 +1738,9 @@ public OnPlayerConnect(playerid)
 	orm_setkey(ormid, "Nome");
 	orm_select(ormid, "OnPlayerLogin", "d", playerid);
     PlayerInfo[playerid][OrmID] = ormid;
-    
+    SendClientMessage(playerid, -1, " ");
     SendClientMessage(playerid, -1, "{FFD700}Seja bem vindo ao Mega Freeroam. Escolha uma skin.");
-
+    SendClientMessage(playerid, -1, "");
     PlayerInfo[playerid][Logado] = false;
     PlayerInfo[playerid][pDLevel] = 0;
     PlayerInfo[playerid][pFPS] = 0;
@@ -1928,6 +1957,23 @@ public OnPlayerConnect(playerid)
 	PlayerTextDrawSetSelectable(playerid,PlayerInfo[playerid][PlayerDano][8], 0);
 	
 	PlayerInfo[playerid][pEspiando] = INVALID_PLAYER_ID;
+
+    //golf stunt
+    RemoveBuildingForPlayer(playerid, 621, 1273.2578, 2727.6719, 9.8203, 0.25);
+    RemoveBuildingForPlayer(playerid, 622, 1277.9219, 2736.6484, 9.8203, 0.25);
+    RemoveBuildingForPlayer(playerid, 616, 1264.0703, 2776.8750, 9.8203, 0.25);
+    RemoveBuildingForPlayer(playerid, 622, 1269.9375, 2782.9375, 9.8203, 0.25);
+    RemoveBuildingForPlayer(playerid, 621, 1280.9297, 2787.8984, 9.8203, 0.25);
+    RemoveBuildingForPlayer(playerid, 616, 1259.2813, 2844.4609, 9.8203, 0.25);
+    RemoveBuildingForPlayer(playerid, 621, 1304.2578, 2731.8359, 9.8203, 0.25);
+    RemoveBuildingForPlayer(playerid, 622, 1316.8828, 2860.0313, 9.8203, 0.25);
+    RemoveBuildingForPlayer(playerid, 621, 1390.9531, 2823.7344, 9.8203, 0.25);
+    RemoveBuildingForPlayer(playerid, 616, 1396.8906, 2825.1875, 9.8203, 0.25);
+    RemoveBuildingForPlayer(playerid, 621, 1378.1406, 2847.3438, 9.8281, 0.25);
+    RemoveBuildingForPlayer(playerid, 622, 1384.5000, 2848.6016, 9.8203, 0.25);
+    RemoveBuildingForPlayer(playerid, 621, 1399.3359, 2840.8672, 9.8203, 0.25);
+    RemoveBuildingForPlayer(playerid, 621, 1404.9063, 2830.7734, 9.8203, 0.25);
+
 	return 1;
 }
 forward OnPlayerLogin(playerid);
@@ -1936,7 +1982,7 @@ public OnPlayerLogin(playerid) {
 	switch(orm_errno(PlayerInfo[playerid][OrmID])) {
 		case ERROR_OK: {
 		    GivePlayerMoney(playerid, PlayerInfo[playerid][pDinheiro]);
-			format(Dialog, sizeof(Dialog), "{ffffff}Olá {%06x}%s{ffffff}, efetue login digitando sua senha abaixo:\n", GetPlayerColor(playerid) >>> 8, PlayerInfo[playerid][pNome]);
+			format(Dialog, sizeof(Dialog), "{ffffff}Bem vindo de volta {ff0000}%s{ffffff}, efetue login digitando sua senha abaixo:\n", PlayerInfo[playerid][pNome]);
 			ShowPlayerDialog(playerid, DialogLogar, DIALOG_STYLE_PASSWORD, "{ff0000}# {ffffff}Login", Dialog, "Login", "Cancelar");
 		}
 		case ERROR_NO_DATA: {
@@ -2011,6 +2057,7 @@ public OnPlayerDisconnect(playerid, reason)
 	PlayerInfo[playerid][pRegistroDia] = 0;
 	PlayerInfo[playerid][Teclas] = false;
 	PlayerInfo[playerid][pEspiando] = INVALID_PLAYER_ID;
+	PlayerInfo[playerid][Colisao] = false;
 	return 1;
 }
 
@@ -2147,17 +2194,46 @@ public OnPlayerText(playerid, text[])
     if(PlayerInfo[playerid][Logado] == false) return SendClientMessage(playerid, -1, "{ff0000}Você não pode falar nada no chat sem estar logado."), 0;
     if(PlayerInfo[playerid][Mudo] == 1) return SendClientMessage(playerid, -1, "{ff0000}Você está calado."), 0;
 	new Msg[144];
+    new pvar [128] ;
+    if(Flooder[playerid] == 1)
+    {
+        SendClientMessage(playerid, -1, "{FF0000}[ERRO]{FFFFFF} Você está calado por 30 segundos e não pode usar o chat !");
+        return 0;
+    }
+    IsFlooding[playerid]++;
+    if(IsFlooding[playerid] >= 3)
+    {
+        new pegarnome[24], pegarmensagem[128];
+        GetPlayerName(playerid, pegarnome, sizeof(pegarnome));
+        IsFlooding[playerid] = 0;
+        Flooder[playerid] = 1;
+        SendClientMessage(playerid, -1, "{FF0000}[INFO]{FFFFFF} Você foi calado por 30 segundos. Motivo: Flood");
+        format(pegarmensagem, 128, "{009D4F}%s foi calado por 30 segundos. Motivo: {00A058}Flood", pegarnome);
+		SendClientMessageToAll(0xFFFFFFFF, pegarmensagem);
+        SetTimerEx("LiberarChat", 30000, false, "i", playerid);
+        return 0;
+    }
+    else
+    {
+        SetTimerEx("SemFlood", 2000, false, "i", playerid);
+    }
+	GetPVarString (playerid,"UltimoTexto",pvar,sizeof(pvar)) ;
+	if(strlen(pvar)&&!strcmp(pvar,text)){
+        SendClientMessage(playerid,0x00FFFFFF,"* Pare de repetir no chat!") ;
+        return 0;
+	}
+	SetPVarString(playerid,"UltimoTexto",text ) ;
     if(text[0] == ';') {
         new Float:pT[3];
         GetPlayerPos(playerid, pT[0], pT[1], pT[2]);
         format(Msg, sizeof(Msg),"{6495ED}* [PRÓX] %s: %s", PlayerInfo[playerid][pNome], text[1]);
         for(new i; i <= GetMaxPlayers(); i++) {
-            if(IsPlayerInRangeOfPoint(i, 50.0, pT[0], pT[1], pT[2]))
+            if(IsPlayerInRangeOfPoint(i, 30.0, pT[0], pT[1], pT[2]))
                 SendClientMessage(i, -1, Msg);
         }
         return 0;
     }
-    format(Msg, 144, "%s{%06x}%s (%i): {ffffff}%s", (PlayerInfo[playerid][pLevel] > 0) ? ("ADMIN ") : (""), GetPlayerColor(playerid) >>> 8, PlayerInfo[playerid][pNome], playerid, text);
+    format(Msg, 144, "%i - {%06x}%s: {ffffff}%s", playerid, GetPlayerColor(playerid) >>> 8, PlayerInfo[playerid][pNome], text);
     SendClientMessageToAll(-1, Msg);
     SetPlayerChatBubble(playerid, text, 0xEEEED180, 30.0, 10000);
 	return 0;
@@ -2323,6 +2399,7 @@ public OnPlayerKeyStateChange(playerid, newkeys, oldkeys)
 			new Float:Velocity[3];
 			GetVehicleVelocity(GetPlayerVehicleID(playerid), Velocity[0], Velocity[1], Velocity[2]);
             SetVehicleVelocity(GetPlayerVehicleID(playerid), Velocity[0]*1.8, Velocity[1]*1.8, Velocity[2]*1.8);
+            GameTextForPlayer(playerid, "~r~Turbo~w~!~b~!~g~!~w~!", 5000, 4);
         }
     }
     if(GetPlayerVehicleSeat(playerid) == 0 && PRESSED(KEY_ACTION))
@@ -2750,8 +2827,8 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
             new Msg[144]; //query[256];
             format(Msg, 144, "{ffff00}Obrigado por se registrar em nosso servidor {ffffff}%s{ffff00}!", PlayerInfo[playerid][pNome]);
             SendClientMessage(playerid, -1, Msg);
-			format(PlayerInfo[playerid][pSenha], 50, Encriptar(inputtext));
-			PlayerInfo[playerid][pUltimoLogin] = gettime();
+            SHA256_PassHash(inputtext, HASH_SENHA, PlayerInfo[playerid][pSenha], 64); // SA-MP 0.3.7
+			PlayerInfo[playerid][pTempoLogado] = PlayerInfo[playerid][pUltimoLogin] = gettime();
 			new Dia, Mes, Ano, Horas, Min;
 			getdate(Ano, Mes, Dia);
 			gettime(Horas, Min);
@@ -2764,7 +2841,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
         }
         case DialogLogar: {
             if(!response) return KickMsg(playerid, "Kickado por não logar.");
-            new Msg[144];
+            new Msg[144], Senha[100];
             if(strlen(inputtext) <= 1) {
                 if(PlayerInfo[playerid][pErrosSenha] > 3) return SendClientMessage(playerid, -1, "{EECFA1}Lamentamos, esgotou-se as tentativas para login.");
                 SendClientMessage(playerid, -1, "{ff0000}Você precisa digitar uma senha!");
@@ -2773,10 +2850,11 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
                 LoginDialog(playerid, Msg);
                 return 1;
             }
-            if(strcmp(Descriptar(PlayerInfo[playerid][pSenha]), inputtext, false) != 0) {
+			SHA256_PassHash(inputtext,HASH_SENHA,Senha,64);
+            if(strcmp(PlayerInfo[playerid][pSenha], Senha, false) != 0) {
                 if(PlayerInfo[playerid][pErrosSenha] > 3) {
 					if(strlen(PlayerInfo[playerid][pEmail]) > 3) {
-						//
+						SendClientMessage(playerid,-1,"{FF0000}Desculpe o transtorno, mas nós não criamos esta parte ainda!");
 					}
 				 	KickMsg(playerid, "{ff0000}Você não conseguiu logar com sucesso em nosso servidor.");
 					return 1;
@@ -2811,6 +2889,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
             SendClientMessageToAll(-1, Msg);
             PlayerInfo[playerid][pErrosSenha] = 0;
 			PlayerInfo[playerid][pUltimoLogin] = gettime();
+			DisableRemoteVehicleCollisions(playerid,PlayerInfo[playerid][Colisao]);
             return 1;
         }
         case DialogCorridas: {
@@ -3019,7 +3098,8 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
                     SetTimerEx("Descongelar", 3000, false, "d", playerid);
                 }
                 format(Msg, 144, "%s foi para %s ( /%s )", PlayerInfo[playerid][pNome], Teleportes[i][teleportNome], Teleportes[i][TeleCmd]);
-                SendClientMessageToAll(0xFFD700FF, Msg);
+                new randCor = random (sizeof(CorTeles));
+                SendClientMessageToAll(CorTeles[randCor], Msg);
                 break;
             }
             return 1;
@@ -3048,7 +3128,8 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
                     SetTimerEx("Descongelar", 3000, false, "d", playerid);
                 }
                 format(Msg, 144, "%s foi para %s ( /%s )", PlayerInfo[playerid][pNome], Teleportes[i][teleportNome], Teleportes[i][TeleCmd]);
-                SendClientMessageToAll(0xFFD700FF, Msg);
+                new randCor = random (sizeof(CorTeles));
+                SendClientMessageToAll(CorTeles[randCor], Msg);
                 break;
             }
             return 1;
@@ -3077,7 +3158,8 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
                     SetTimerEx("Descongelar", 3000, false, "d", playerid);
                 }
                 format(Msg, 144, "%s foi para %s ( /%s )", PlayerInfo[playerid][pNome], Teleportes[i][teleportNome], Teleportes[i][TeleCmd]);
-                SendClientMessageToAll(0xFFD700FF, Msg);
+                new randCor = random (sizeof(CorTeles));
+                SendClientMessageToAll(CorTeles[randCor], Msg);
                 break;
             }
             return 1;
@@ -3106,7 +3188,8 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
                     SetTimerEx("Descongelar", 3000, false, "d", playerid);
                 }
                 format(Msg, 144, "%s foi para %s ( /%s )", PlayerInfo[playerid][pNome], Teleportes[i][teleportNome], Teleportes[i][TeleCmd]);
-                SendClientMessageToAll(0xFFD700FF, Msg);
+                new randCor = random (sizeof(CorTeles));
+                SendClientMessageToAll(CorTeles[randCor], Msg);
                 break;
             }
             return 1;
@@ -3135,7 +3218,8 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
                     SetTimerEx("Descongelar", 3000, false, "d", playerid);
                 }
                 format(Msg, 144, "%s foi para %s ( /%s )", PlayerInfo[playerid][pNome], Teleportes[i][teleportNome], Teleportes[i][TeleCmd]);
-                SendClientMessageToAll(0xFFD700FF, Msg);
+                new randCor = random (sizeof(CorTeles));
+                SendClientMessageToAll(CorTeles[randCor], Msg);
                 break;
             }
             return 1;
@@ -3164,7 +3248,8 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
                     SetTimerEx("Descongelar", 3000, false, "d", playerid);
                 }
                 format(Msg, 144, "%s foi para %s ( /%s )", PlayerInfo[playerid][pNome], Teleportes[i][teleportNome], Teleportes[i][TeleCmd]);
-                SendClientMessageToAll(0xFFD700FF, Msg);
+                new randCor = random (sizeof(CorTeles));
+                SendClientMessageToAll(CorTeles[randCor], Msg);
                 break;
             }
             return 1;
@@ -3193,7 +3278,8 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
                     SetTimerEx("Descongelar", 3000, false, "d", playerid);
                 }
                 format(Msg, 144, "%s foi para %s ( /%s )", PlayerInfo[playerid][pNome], Teleportes[i][teleportNome], Teleportes[i][TeleCmd]);
-                SendClientMessageToAll(0xFFD700FF, Msg);
+                new randCor = random (sizeof(CorTeles));
+                SendClientMessageToAll(CorTeles[randCor], Msg);
                 break;
             }
             return 1;
@@ -3217,7 +3303,8 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
                     SetPlayerFacingAngle(playerid, Teleportes[i][tRot]);
                 }
                 format(Msg, 144, "%s foi para %s ( /%s )", PlayerInfo[playerid][pNome], Teleportes[i][teleportNome], Teleportes[i][TeleCmd]);
-                SendClientMessageToAll(0xFFD700FF, Msg);
+                new randCor = random (sizeof(CorTeles));
+                SendClientMessageToAll(CorTeles[randCor], Msg);
                 break;
             }
             return 1;
@@ -3230,19 +3317,21 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
             new Dialog[2000], comandos;
             for(new i = 0; i < sizeof(Cmds); i++) {
                 if(Cmds[i][ComandoClasse] == cmdClasse) {
-                    if(comandos > 30) break;
+                    if(comandos > 30) {
+                        SetPVarInt(playerid, "cmd_lista", i);
+						break;
+					}
                     if(Cmds[i][ComandoLevel] <= 0)
-                        format(Dialog, sizeof(Dialog), "%s- %s\t%s\n", Dialog, Cmds[i][ComandoNome], Cmds[i][ComandoInfo]);
+                        format(Dialog, sizeof(Dialog), "%s%s\t%s\n", Dialog, Cmds[i][ComandoNome], Cmds[i][ComandoInfo]);
                     else {
                         if(PlayerInfo[playerid][pLevel] >= Cmds[i][ComandoLevel])
-                            format(Dialog, sizeof(Dialog), "%sLevel %i - %s\t - \t%s\n", Dialog, Cmds[i][ComandoLevel], Cmds[i][ComandoNome], Cmds[i][ComandoInfo]);
+                            format(Dialog, sizeof(Dialog), "%sLevel %i: %s\t%s\n", Dialog, Cmds[i][ComandoLevel], Cmds[i][ComandoNome], Cmds[i][ComandoInfo]);
                     }
                     comandos++;
-                    SetPVarInt(playerid, "cmd_lista", i+1);
                 }
             }
             if(comandos == 0) return SendClientMessage(playerid, -1, "{ff0000}Não há comandos nesta opção!"), cmd_cmds(playerid, "");
-            ShowPlayerDialog(playerid, DialogComandos, DIALOG_STYLE_MSGBOX, "{ff0000}# {ffffff}Página de Comandos", Dialog, "Ok", "Voltar");
+            ShowPlayerDialog(playerid, DialogComandos, DIALOG_STYLE_TABLIST, "{ff0000}# {ffffff}Página de Comandos", Dialog, "Ok", "Voltar");
             return 1;
         }
         case DialogComandos: {
@@ -3251,19 +3340,21 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
             new Dialog[2000], comandos;
             for(new i = GetPVarInt(playerid, "cmd_lista"); i < sizeof(Cmds); i++) {
                 if(Cmds[i][ComandoClasse] == cmdClasse) {
-                    if(comandos > 30) break;
+                    if(comandos > 30) {
+                        SetPVarInt(playerid, "cmd_lista", i + 1);
+                        break;
+					}
                     if(Cmds[i][ComandoLevel] <= 0)
-                        format(Dialog, sizeof(Dialog), "%s- %s\t%s\n", Dialog, Cmds[i][ComandoNome], Cmds[i][ComandoInfo]);
+                        format(Dialog, sizeof(Dialog), "%s%s\t%s\n", Dialog, Cmds[i][ComandoNome], Cmds[i][ComandoInfo]);
                     else {
                         if(PlayerInfo[playerid][pLevel] >= Cmds[i][ComandoLevel])
-                            format(Dialog, sizeof(Dialog), "%sLevel %i - %s\t - \t%s\n", Dialog, Cmds[i][ComandoLevel], Cmds[i][ComandoNome], Cmds[i][ComandoInfo]);
+                            format(Dialog, sizeof(Dialog), "%sLevel %i: %s\t%s\n", Dialog, Cmds[i][ComandoLevel], Cmds[i][ComandoNome], Cmds[i][ComandoInfo]);
                     }
                     comandos++;
-                    SetPVarInt(playerid, "cmd_lista", i + 1);
                 }
             }
             if(comandos == 0) return SendClientMessage(playerid, -1, "{ff0000}Nada encontrado!"), cmd_cmds(playerid, "");
-            ShowPlayerDialog(playerid, DialogComandos, DIALOG_STYLE_MSGBOX, "{ff0000}# {ffffff}Página de Comandos", Dialog, "Ok", "Voltar");
+            ShowPlayerDialog(playerid, DialogComandos, DIALOG_STYLE_TABLIST, "{ff0000}# {ffffff}Página de Comandos", Dialog, "Ok", "Voltar");
             return 1;
         }
         case DialogArenasDM: {
@@ -3312,7 +3403,9 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
         }
         case DialogMudarSenha: {
             if(!response || strlen(inputtext) <= 1) return 1;
-            if(!strcmp(Descriptar(PlayerInfo[playerid][pSenha]), inputtext, false)) {
+            new Senha[100];
+            SHA256_PassHash(inputtext,HASH_SENHA,Senha,64);
+            if(!strcmp(PlayerInfo[playerid][pSenha], Senha, false)) {
                 return ShowPlayerDialog(playerid, DialogNovaSenha, DIALOG_STYLE_PASSWORD, "{ff0000}# {ffffff}Digite a nova senha", "Você digitou corretamente sua senha antiga, agora digite a nova senha", "Ok", "");
             }
             else
@@ -3321,18 +3414,23 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
         }
         case DialogNovaSenha: {
             if(!response || strlen(inputtext) <= 1) return 1;
-            if(!strcmp(inputtext, Descriptar(PlayerInfo[playerid][pSenha]), false)) return SendClientMessage(playerid, -1, "{ff0000}Sua nova senha não pode ser igual a antiga.");
+            new Senha[100];
+            SHA256_PassHash(inputtext,HASH_SENHA,Senha,64);
+            if(!strcmp(Senha, PlayerInfo[playerid][pSenha], false)) return SendClientMessage(playerid, -1, "{ff0000}Sua nova senha não pode ser igual a antiga.");
             SetPVarString(playerid, "nova_senha", inputtext);
             ShowPlayerDialog(playerid, DialogConfirmarSenha, DIALOG_STYLE_PASSWORD, "{ff0000}# {ffffff}Confirmar nova senha", "Digite novamente sua nova senha:", "Ok", "");
             return 1;
         }
         case DialogConfirmarSenha: {
             if(!response || strlen(inputtext) <= 1) return 1;
-            if(!strcmp(inputtext, Descriptar(PlayerInfo[playerid][pSenha]), false)) return SendClientMessage(playerid, -1, "{ff0000}Sua nova senha não pode ser igual a antiga.");
-            new SenhaDigitada[50];
-            GetPVarString(playerid, "nova_senha", SenhaDigitada, 50);
+            new Senha[100];
+            SHA256_PassHash(inputtext,HASH_SENHA,Senha,64);
+            if(!strcmp(Senha, PlayerInfo[playerid][pSenha], false)) return SendClientMessage(playerid, -1, "{ff0000}Sua nova senha não pode ser igual a antiga.");
+            new SenhaDigitada[100];
+            GetPVarString(playerid, "nova_senha", SenhaDigitada, 100);
             if(strcmp(inputtext, SenhaDigitada, false) != 0) return SendClientMessage(playerid, -1, "{ff0000}Você não havia digitado esta senha anteriormente."), DeletePVar(playerid, "nova_senha");
-            format(PlayerInfo[playerid][pSenha], 50, Encriptar(inputtext));
+			SHA256_PassHash(inputtext,HASH_SENHA,PlayerInfo[playerid][pSenha],64);
+			SalvarConta(playerid);
             ShowPlayerDialog(playerid, DialogSemResposta, DIALOG_STYLE_MSGBOX, "{ffff00}# {ffffff}Senha alterada!", "Sua senha foi alterada com sucesso!\nNão se esqueça de sua senha para logar novamente!", "Ok", "");
             return 1;
         }
@@ -3976,25 +4074,12 @@ public Contando() {
     return 1;
 }
 
-stock Encriptar(const string[]) {
-    new str[50];
-    for(new i; i < strlen(string); i++) {
-        str[i] = (string[i] + 2);
-    }
-    return str;
-}
-stock Descriptar(const string[]) {
-    new str[50];
-    for(new i; i < strlen(string); i++) {
-        str[i] = (string[i] - 2);
-    }
-    return str;
-}
+
 //Sistema de Corridas - NicK
 forward CorridaAleatoria();
 public CorridaAleatoria()
 {
-	if(GetPlayers() < 10) return 1;
+	//if(GetPlayers() < 10) return 1;
 	new Cache:corridas = mysql_query(mysql, "SELECT * FROM corridas ORDER BY ID DESC LIMIT 10", true);
 	if(cache_num_rows(mysql) > 0) {
 		new corridaid, str[200], Msg[144], ca = random(cache_num_rows(mysql));
@@ -4638,7 +4723,12 @@ CMD:saircorrida(playerid, params[]) {
 	SendClientMessage(playerid, -1, "{ff0000}* Você saiu da corrida! :/");
 	return 1;
 }
-
+CMD:para(playerid, params [])
+{
+	GivePlayerWeapon(playerid,46,1);
+ 	SendClientMessage(playerid, -1, "{ff0000}* Você recebeu um paraquedas!");
+  	return 1;
+}
 
 CMD:teles(playerid, params[]) {
     if(PlayerInfo[playerid][EmArena] == true) return SendClientMessage(playerid, -1, "{EE00EE}* Não é possivel teleportar em uma arena, use /sairarena.");
@@ -5513,6 +5603,58 @@ CMD:contagem(playerid, params[]) {
     return 1;
 }
 
+CMD:contar(playerid, params[])
+{
+	if(Count == 0)
+	{
+	    new cstring[128]; Count = 4;
+	    format(cstring, sizeof(cstring), "{6495ED}%s iniciou uma contagem!", PlayerInfo[playerid][pNome]);
+	    SendClientMessageToAll(-1, cstring);
+		SetTimerEx("CountD", 1000, false, "i", playerid);
+	}
+	//--------------------------------------------------------------------------
+	else return
+	SendClientMessage(playerid, -1,"{6495ED}Já existe uma contagem em andamento!");
+	//--------------------------------------------------------------------------
+	return 1;
+}
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+forward CountD(playerid);
+public CountD(playerid)
+{
+	if(Count == 4)
+	{
+	    Count = 3;
+		GameTextForAll("~b~3", 1000, 6);
+        for(new i; i <= GetMaxPlayers(); i++) {
+    	PlayerPlaySound(i, 1056,0,0,0);}
+		SetTimerEx("CountD", 1000, false, "i", playerid);
+	}
+	else if(Count == 3)
+	{
+	    Count = 2;
+		GameTextForAll("~y~2", 1000, 6);
+        for(new i; i <= GetMaxPlayers(); i++) {
+    	PlayerPlaySound(i, 1056,0,0,0);}
+		SetTimerEx("CountD", 1000, false, "i", playerid);
+	}
+	else if(Count == 2)
+	{
+ 		Count = 1;
+		GameTextForAll("~r~1", 1000, 6);
+        for(new i; i <= GetMaxPlayers(); i++) {
+    	PlayerPlaySound(i, 1056,0,0,0);}
+		SetTimerEx("CountD", 1000, false, "i", playerid);
+	}
+	else if(Count == 1)
+	{
+	    Count = 0;
+	    GameTextForAll("~b~vai ~y~vai~r~ vai", 2000, 6);
+        for(new i; i <= GetMaxPlayers(); i++) {
+        PlayerPlaySound(i, 3200,0,0,0);}
+	}
+}
+
 CMD:radios(playerid, params[])
 {
     new Radios[2000];
@@ -5822,6 +5964,21 @@ CMD:teclasveiculo(playerid, params[]) {
 	SendClientMessage(playerid, -1, (PlayerInfo[playerid][Teclas] == true) ? ("{ffff00}Teclas do veículo ativas!") : ("{ff0000}Teclas do veículo desativadas!"));
 	return 1;
 }
+//v0.1.1 [SA-MP 0.3.7]
+CMD:colisao(playerid,params[]) {
+	if(PlayerInfo[playerid][Colisao] == false) {
+		DisableRemoteVehicleCollisions(playerid, true);
+		PlayerInfo[playerid][Colisao] = true;
+		GameTextForPlayer(playerid, "~w~Colisao ~g~desabilitada~w~!", 5000, 4);
+	}
+	else {
+		DisableRemoteVehicleCollisions(playerid, false);
+		PlayerInfo[playerid][Colisao] = false;
+		GameTextForPlayer(playerid, "~w~Colisao ~r~habilitada~w~!", 5000, 4);
+	}
+	SalvarConta(playerid);
+	return 1;
+}
 /*********************************
     Teleportes (comandos)
 **********************************/
@@ -5836,6 +5993,7 @@ CMD:easterboard(playerid, params[]) return OnDialogResponse(playerid, DialogTele
 CMD:sfstunt(playerid, params[]) return OnDialogResponse(playerid, DialogTeleStunt, 1, 7, "");
 CMD:aerosf(playerid, params[]) return OnDialogResponse(playerid, DialogTeleStunt, 1, 8, "");
 CMD:aerolv(playerid, params[]) return OnDialogResponse(playerid, DialogTeleStunt, 1, 9, "");
+CMD:golf(playerid, params[]) return OnDialogResponse(playerid, DialogTeleStunt, 1, 10, "");
 //Pistas
 CMD:drop1(playerid, params[]) return OnDialogResponse(playerid, DialogTelePistas, 1, 0, "");
 CMD:drop2(playerid, params[]) return OnDialogResponse(playerid, DialogTelePistas, 1, 1, "");
@@ -5847,6 +6005,8 @@ CMD:loop2(playerid, params[]) return OnDialogResponse(playerid, DialogTelePistas
 CMD:insano1(playerid, params[]) return OnDialogResponse(playerid, DialogTelePistas, 1, 7, "");
 CMD:insano2(playerid, params[]) return OnDialogResponse(playerid, DialogTelePistas, 1, 8, "");
 CMD:insano3(playerid, params[]) return OnDialogResponse(playerid, DialogTelePistas, 1, 9, "");
+CMD:roller(playerid, params[]) return OnDialogResponse(playerid, DialogTelePistas, 1, 10, "");
+CMD:ip(playerid, params[]) return OnDialogResponse(playerid, DialogTelePistas, 1, 11, "");
 //Normais
 CMD:lossantos(playerid, params[]) return OnDialogResponse(playerid, DialogTeleNormal, 1, 0, "");
 CMD:lstransfender(playerid, params[]) return OnDialogResponse(playerid, DialogTeleNormal, 1, 1, "");
@@ -5867,10 +6027,12 @@ CMD:palomino(playerid, params[]) return OnDialogResponse(playerid, DialogTeleNor
 CMD:montgomery(playerid, params[]) return OnDialogResponse(playerid, DialogTeleNormal, 1, 16, "");
 //Drift
 CMD:drift1(playerid, params[]) return OnDialogResponse(playerid, DialogTeleDrift, 1, 0, "");
+CMD:drift2(playerid, params[]) return OnDialogResponse(playerid, DialogTeleDrift, 1, 1, "");
 //Pulos
 CMD:puloinsano(playerid, params[]) return OnDialogResponse(playerid, DialogTelePulos, 1, 0, "");
 CMD:bigtunel(playerid, params[]) return OnDialogResponse(playerid, DialogTelePulos, 1, 1, "");
 CMD:superrampa(playerid, params[]) return OnDialogResponse(playerid, DialogTelePulos, 1, 2, "");
+CMD:sky(playerid, params[]) return OnDialogResponse(playerid, DialogTelePulos, 1, 3, ""), GivePlayerWeapon(playerid, 46, 1);
 //Corridas
 CMD:nascar(playerid, params[]) return OnDialogResponse(playerid, DialogTeleCorridas, 1, 1, "");
 CMD:drag(playerid, params[]) return OnDialogResponse(playerid, DialogTeleCorridas, 1, 0, "");
@@ -5881,6 +6043,8 @@ CMD:espiral(playerid, params[]) return OnDialogResponse(playerid, DialogTeleTubo
 CMD:tubosf(playerid, params[]) return OnDialogResponse(playerid, DialogTeleTubos, 1, 2, "");
 //Variados
 CMD:trampolim(playerid, params[]) return OnDialogResponse(playerid, DialogTeleVariado, 1, 0, "");
+CMD:festa(playerid, params[]) return OnDialogResponse(playerid, DialogTeleVariado, 1, 1, "");
+CMD:monsterpk(playerid, params[]) return OnDialogResponse(playerid, DialogTeleVariado, 1, 2, "");
 //Arenas
 CMD:minigun(playerid, params[]) return OnDialogResponse(playerid, DialogArenasDM, 1, 0, "");
 CMD:ak47(playerid, params[]) return OnDialogResponse(playerid, DialogArenasDM, 1, 1, "");
@@ -6104,4 +6268,20 @@ stock Veiculos() {
 	AddStaticVehicle(406,2207.10009766,1507.00000000,3865.30004883,180.00000000,-1,-1); //Dumper
     return 1;
 }
+
+forward SemFlood(playerid);
+public SemFlood(playerid)
+{
+    IsFlooding[playerid] = 0;
+    return 1;
+}
+
+forward LiberarChat(playerid);
+public LiberarChat(playerid)
+{
+    Flooder[playerid] = 0;
+    SendClientMessage(playerid, 0x60BFFFAA, "{FFFF00}[INFO] {009D4F}Você foi descalado, não faça mais flood !");
+    return 1;
+}
+
 
