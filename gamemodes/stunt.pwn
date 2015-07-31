@@ -115,12 +115,26 @@ native gpci(playerid, const serial[ ], maxlen);
 	
 #define HASH_SENHA  "AEOAUEABABEAEAEOUAEIX" //Sha256 para Senhas
 
-//by NicK
-
+//Forward's
+forward OnPlayerLogin(playerid);
+forward TirarDrawDano(playerid);
+forward ModoDriftAtivo(playerid);
+forward AtualizarPontosDrift(playerid, pontos);
+forward Kickar(playerid);
+forward Global();
+forward LimparAnuncio();
+forward Frases();
+forward Descongelar(playerid);
+forward SpawnKill(playerid);
+forward TVMatador(playerid);
+forward Contando();
+forward LiberarChat(playerid);
+forward SemFlood(playerid);
+///////////////////////
 
 #define AMMO 100000
 
-#define Versao      "v0.1"
+#define Versao      "v0.1.1"
 #undef MAX_PLAYERS
 #define MAX_PLAYERS 1001
 
@@ -1693,51 +1707,50 @@ public OnPlayerConnect(playerid)
 	}
 	cache_delete(BanGPCI, mysql);
 
- 	new ORM:ormid = orm_create("usuarios", mysql);
-	
-	orm_addvar_string(ormid, PlayerInfo[playerid][pNome], 24, "Nome");
-	orm_addvar_string(ormid, PlayerInfo[playerid][pSenha], 128, "Senha");
-   	orm_addvar_int(ormid, PlayerInfo[playerid][pMySQL_ID], "id");
-   	orm_addvar_int(ormid, PlayerInfo[playerid][pLevel], "Level");
-	orm_addvar_int(ormid, PlayerInfo[playerid][pMorreu], "Morreu");
-	orm_addvar_int(ormid, PlayerInfo[playerid][pMatou], "Matou");
-	orm_addvar_int(ormid, PlayerInfo[playerid][pDinheiro], "Dinheiro");
-	orm_addvar_int(ormid, PlayerInfo[playerid][pScore], "Score");
-	orm_addvar_int(ormid, PlayerInfo[playerid][pGold], "Gold");
-	orm_addvar_int(ormid, PlayerInfo[playerid][pCorridas], "Corridas");
-	orm_addvar_int(ormid, PlayerInfo[playerid][pDriftPontosTotal], "PontosDrift");
-	orm_addvar_int(ormid, PlayerInfo[playerid][ModoDrift], "ModoDrift");
-	orm_addvar_string(ormid, PlayerInfo[playerid][pRegistroDia], 50, "Registrado");
-	orm_addvar_int(ormid, PlayerInfo[playerid][pUltimoLogin], "UltimoLogin");
-   	orm_addvar_int(ormid, PlayerInfo[playerid][pTempoJogado], "TempoJogado");
-   	orm_addvar_int(ormid, PlayerInfo[playerid][Teclas], "Teclas");
-	orm_addvar_int(ormid, PlayerInfo[playerid][Mudo], "Mudo");
-	orm_addvar_int(ormid, PlayerInfo[playerid][MostrarDano], "ExibirDano");
-	orm_addvar_int(ormid, PlayerInfo[playerid][pGang], "Gang");
-	orm_addvar_int(ormid, PlayerInfo[playerid][Colisao], "Colisao");
+ 	PlayerInfo[playerid][OrmID] = orm_create("usuarios", mysql);
+	orm_addvar_string(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pNome], 24, "Nome");
+	orm_addvar_string(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pSenha], 128, "Senha");
+   	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pMySQL_ID], "id");
+   	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pLevel], "Level");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pMorreu], "Morreu");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pMatou], "Matou");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pDinheiro], "Dinheiro");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pScore], "Score");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pGold], "Gold");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pCorridas], "Corridas");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pDriftPontosTotal], "PontosDrift");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][ModoDrift], "ModoDrift");
+	orm_addvar_string(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pRegistroDia], 50, "Registrado");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pUltimoLogin], "UltimoLogin");
+   	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pTempoJogado], "TempoJogado");
+   	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][Teclas], "Teclas");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][Mudo], "Mudo");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][MostrarDano], "ExibirDano");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][pGang], "Gang");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][Colisao], "Colisao");
 	//Salvamento de Veículo
-	orm_addvar_int(ormid, PlayerInfo[playerid][VehModelo], "VeiculoModelo");
-	orm_addvar_int(ormid, PlayerInfo[playerid][VehCores][0], "VeiculoCor1");
-	orm_addvar_int(ormid, PlayerInfo[playerid][VehCores][1], "VeiculoCor2");
-	orm_addvar_int(ormid, PlayerInfo[playerid][NeonID], "Neon");
-	orm_addvar_int(ormid, PlayerInfo[playerid][VehPintura], "VeiculoPintura");
-	orm_addvar_int(ormid, PlayerInfo[playerid][VehComponentes][0], "Aerofolio");
-	orm_addvar_int(ormid, PlayerInfo[playerid][VehComponentes][1], "Capô");
-    orm_addvar_int(ormid, PlayerInfo[playerid][VehComponentes][2], "Teto");
-    orm_addvar_int(ormid, PlayerInfo[playerid][VehComponentes][3], "SaiasLaterais");
-    orm_addvar_int(ormid, PlayerInfo[playerid][VehComponentes][4], "Farois");
-    orm_addvar_int(ormid, PlayerInfo[playerid][VehComponentes][5], "Nitro");
-    orm_addvar_int(ormid, PlayerInfo[playerid][VehComponentes][6], "Descarga");
-    orm_addvar_int(ormid, PlayerInfo[playerid][VehComponentes][7], "Rodas");
-    orm_addvar_int(ormid, PlayerInfo[playerid][VehComponentes][8], "Stereo");
-    orm_addvar_int(ormid, PlayerInfo[playerid][VehComponentes][9], "Hidraulica");
-    orm_addvar_int(ormid, PlayerInfo[playerid][VehComponentes][10], "SaiaDianteira");
-    orm_addvar_int(ormid, PlayerInfo[playerid][VehComponentes][11], "SaiaTrazeira");
-    orm_addvar_int(ormid, PlayerInfo[playerid][VehComponentes][12], "VentDireito");
-    orm_addvar_int(ormid, PlayerInfo[playerid][VehComponentes][13], "VentEsquerdo");
-	orm_setkey(ormid, "Nome");
-	orm_select(ormid, "OnPlayerLogin", "d", playerid);
-    PlayerInfo[playerid][OrmID] = ormid;
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehModelo], "VeiculoModelo");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehCores][0], "VeiculoCor1");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehCores][1], "VeiculoCor2");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][NeonID], "Neon");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehPintura], "VeiculoPintura");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehComponentes][0], "Aerofolio");
+	orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehComponentes][1], "Capô");
+    orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehComponentes][2], "Teto");
+    orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehComponentes][3], "SaiasLaterais");
+    orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehComponentes][4], "Farois");
+    orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehComponentes][5], "Nitro");
+    orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehComponentes][6], "Descarga");
+    orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehComponentes][7], "Rodas");
+    orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehComponentes][8], "Stereo");
+    orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehComponentes][9], "Hidraulica");
+    orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehComponentes][10], "SaiaDianteira");
+    orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehComponentes][11], "SaiaTrazeira");
+    orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehComponentes][12], "VentDireito");
+    orm_addvar_int(PlayerInfo[playerid][OrmID], PlayerInfo[playerid][VehComponentes][13], "VentEsquerdo");
+	orm_setkey(PlayerInfo[playerid][OrmID], "Nome");
+	orm_select(PlayerInfo[playerid][OrmID], "OnPlayerLogin", "d", playerid);
+
     SendClientMessage(playerid, -1, " ");
     SendClientMessage(playerid, -1, "{FFD700}Seja bem vindo ao Mega Freeroam. Escolha uma skin.");
     SendClientMessage(playerid, -1, "");
@@ -1976,7 +1989,6 @@ public OnPlayerConnect(playerid)
 
 	return 1;
 }
-forward OnPlayerLogin(playerid);
 public OnPlayerLogin(playerid) {
 	new Dialog[500];
 	switch(orm_errno(PlayerInfo[playerid][OrmID])) {
@@ -2822,7 +2834,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
         case DialogRegistrar: {
             if(!response) return KickMsg(playerid, "Kickado por não querer se registrar!");
             if(strlen(inputtext) < 4) return SendClientMessage(playerid, -1, "{ff0000}Mínimo de caracteres é 4, tente novamente."), RegistroDialog(playerid, "{ff0000}Ponha uma senha com mais de 4 caracteres.");
-            if(strlen(inputtext) > 50) return SendClientMessage(playerid, -1, "{ff0000}Máximo de caracteres é 50. Tente novamente!"), RegistroDialog(playerid, "{ff0000}Ponha uma senha com menos de 50 caracteres.");
+            if(strlen(inputtext) > 64) return SendClientMessage(playerid, -1, "{ff0000}Máximo de caracteres é 50. Tente novamente!"), RegistroDialog(playerid, "{ff0000}Ponha uma senha com menos de 50 caracteres.");
             PlayerInfo[playerid][Logado] = true;
             new Msg[144]; //query[256];
             format(Msg, 144, "{ffff00}Obrigado por se registrar em nosso servidor {ffffff}%s{ffff00}!", PlayerInfo[playerid][pNome]);
@@ -2841,7 +2853,8 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
         }
         case DialogLogar: {
             if(!response) return KickMsg(playerid, "Kickado por não logar.");
-            new Msg[144], Senha[100];
+            new Msg[144], Senha[64];
+            SHA256_PassHash(inputtext,HASH_SENHA,Senha,64);
             if(strlen(inputtext) <= 1) {
                 if(PlayerInfo[playerid][pErrosSenha] > 3) return SendClientMessage(playerid, -1, "{EECFA1}Lamentamos, esgotou-se as tentativas para login.");
                 SendClientMessage(playerid, -1, "{ff0000}Você precisa digitar uma senha!");
@@ -2850,7 +2863,6 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
                 LoginDialog(playerid, Msg);
                 return 1;
             }
-			SHA256_PassHash(inputtext,HASH_SENHA,Senha,64);
             if(strcmp(PlayerInfo[playerid][pSenha], Senha, false) != 0) {
                 if(PlayerInfo[playerid][pErrosSenha] > 3) {
 					if(strlen(PlayerInfo[playerid][pEmail]) > 3) {
@@ -3403,7 +3415,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
         }
         case DialogMudarSenha: {
             if(!response || strlen(inputtext) <= 1) return 1;
-            new Senha[100];
+            new Senha[64];
             SHA256_PassHash(inputtext,HASH_SENHA,Senha,64);
             if(!strcmp(PlayerInfo[playerid][pSenha], Senha, false)) {
                 return ShowPlayerDialog(playerid, DialogNovaSenha, DIALOG_STYLE_PASSWORD, "{ff0000}# {ffffff}Digite a nova senha", "Você digitou corretamente sua senha antiga, agora digite a nova senha", "Ok", "");
@@ -3414,7 +3426,8 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
         }
         case DialogNovaSenha: {
             if(!response || strlen(inputtext) <= 1) return 1;
-            new Senha[100];
+            if(strlen(inputtext) < 4 || strlen(inputtext) > 64) return ShowPlayerDialog(playerid, DialogNovaSenha, DIALOG_STYLE_PASSWORD, "{ff0000}# {ffffff}Digite a nova senha", "Sua senha nova deve conter mais que 4 caracteres e menos de 64.\nDigite sua nova senha:", "Ok", "");
+            new Senha[64];
             SHA256_PassHash(inputtext,HASH_SENHA,Senha,64);
             if(!strcmp(Senha, PlayerInfo[playerid][pSenha], false)) return SendClientMessage(playerid, -1, "{ff0000}Sua nova senha não pode ser igual a antiga.");
             SetPVarString(playerid, "nova_senha", inputtext);
@@ -3423,14 +3436,13 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
         }
         case DialogConfirmarSenha: {
             if(!response || strlen(inputtext) <= 1) return 1;
-            new Senha[100];
+			if(strlen(inputtext) < 4 || strlen(inputtext) > 64) return ShowPlayerDialog(playerid, DialogConfirmarSenha, DIALOG_STYLE_PASSWORD, "{ff0000}# {ffffff}Confirmar nova senha", "Sua senha deve conter mais que 4 caracteres e menos de 64.\nDigite novamente sua nova senha:", "Ok", "");
+			new Senha[64],SenhaDigitada[64];
             SHA256_PassHash(inputtext,HASH_SENHA,Senha,64);
             if(!strcmp(Senha, PlayerInfo[playerid][pSenha], false)) return SendClientMessage(playerid, -1, "{ff0000}Sua nova senha não pode ser igual a antiga.");
-            new SenhaDigitada[100];
-            GetPVarString(playerid, "nova_senha", SenhaDigitada, 100);
+            GetPVarString(playerid, "nova_senha", SenhaDigitada, 64);
             if(strcmp(inputtext, SenhaDigitada, false) != 0) return SendClientMessage(playerid, -1, "{ff0000}Você não havia digitado esta senha anteriormente."), DeletePVar(playerid, "nova_senha");
 			SHA256_PassHash(inputtext,HASH_SENHA,PlayerInfo[playerid][pSenha],64);
-			SalvarConta(playerid);
             ShowPlayerDialog(playerid, DialogSemResposta, DIALOG_STYLE_MSGBOX, "{ffff00}# {ffffff}Senha alterada!", "Sua senha foi alterada com sucesso!\nNão se esqueça de sua senha para logar novamente!", "Ok", "");
             return 1;
         }
@@ -3738,16 +3750,14 @@ stock GetWeaponSlot(weaponid)
 	}
 	return 0;
 }
-forward TirarDrawDano(playerid);
+
 public TirarDrawDano(playerid) {
 	if(GetPVarInt(playerid, "info_dano") > gettime()) return SetTimerEx("TirarDrawDano", 1000, false, "d", playerid);
 	for(new i = 2; i < 9; i++)
 	    PlayerTextDrawHide(playerid, PlayerInfo[playerid][PlayerDano][i]);
 	return 1;
 }
-forward ModoDriftAtivo(playerid);
 public ModoDriftAtivo(playerid) return (PlayerInfo[playerid][ModoDrift] == 1) ? (1) : (0);
-forward AtualizarPontosDrift(playerid, pontos);
 public AtualizarPontosDrift(playerid, pontos) {
 	if(PlayerInfo[playerid][ModoDrift] == 0) return 0;
 	PlayerInfo[playerid][pDriftPontosTotal] += pontos;
@@ -3769,8 +3779,7 @@ stock KickMsg(playerid, msgKick[]) {
     SetTimerEx("Kickar", 300, false, "d", playerid);
     return 1;
 }
-forward Kickar(playerid); public Kickar(playerid) return Kick(playerid);
-forward Global();
+public Kickar(playerid) return Kick(playerid);
 public Global() {
     new str[256], hora, minutos, seg;
     gettime(hora, minutos, seg);
@@ -3822,7 +3831,7 @@ stock LoginDialog(playerid, Aviso[] = "") {
     format(Dialog, sizeof(Dialog), "{ffffff}Seja bem vindo de volta {FF4500}%s{ffffff}.\nPara fazer o login, digite a sua senha abaixo.\n\n%s", PlayerInfo[playerid][pNome], Aviso);
     return ShowPlayerDialog(playerid, DialogLogar, DIALOG_STYLE_PASSWORD, "{FF4500}# {ffffff}Faça login", Dialog, "Logar", "Cancelar");
 }
-forward Frases(); public Frases() {
+public Frases() {
     SendClientMessageToAll(-1, FrasesRandomicas[Frase_Randomica]);
     Frase_Randomica++;
     if(Frase_Randomica >= sizeof(FrasesRandomicas))
@@ -3830,7 +3839,6 @@ forward Frases(); public Frases() {
     return 1;
 }
 
-forward Descongelar(playerid);
 public Descongelar(playerid) { return TogglePlayerControllable(playerid, true); }
 
 stock nick_DrawsStatus(playerid) {
@@ -4023,9 +4031,9 @@ stock nick_DrawsStatus(playerid) {
 	return 1;
 }
 /* Anti Spawn Kill */
-forward SpawnKill(playerid); public SpawnKill(playerid) { return SetPlayerHealth(playerid, 100.0); }
+public SpawnKill(playerid) { return SetPlayerHealth(playerid, 100.0); }
 
-forward TVMatador(playerid);
+
 public TVMatador(playerid) {
     TogglePlayerSpectating(playerid, false);
     for(new i; i < 2; i++) {
@@ -4043,8 +4051,7 @@ stock GetPlayerSpeed(playerid)
     ST[3] = floatsqroot(floatpower(floatabs(ST[0]), 2.0) + floatpower(floatabs(ST[1]), 2.0) + floatpower(floatabs(ST[2]), 2.0)) * 155.0;
     return floatround(ST[3]);
 }
-forward LimparAnuncio(); public LimparAnuncio() { return TextDrawSetString(DrawAnuncio, ""); }
-forward Contando();
+public LimparAnuncio() { return TextDrawSetString(DrawAnuncio, ""); }
 public Contando() {
     new Msg[256];
     if(Contagem[ContagemSegundos] > 0) {
@@ -6269,19 +6276,17 @@ stock Veiculos() {
     return 1;
 }
 
-forward SemFlood(playerid);
+
 public SemFlood(playerid)
 {
     IsFlooding[playerid] = 0;
     return 1;
 }
 
-forward LiberarChat(playerid);
+
 public LiberarChat(playerid)
 {
     Flooder[playerid] = 0;
     SendClientMessage(playerid, 0x60BFFFAA, "{FFFF00}[INFO] {009D4F}Você foi descalado, não faça mais flood !");
     return 1;
 }
-
-
